@@ -1,77 +1,161 @@
+// -----------------------------------------------------------------------------
+// The dashboard widget: every content is checked with the SDK's own validator
+// (the core's vocabulary and budget), and its buttons switch the modes.
+// -----------------------------------------------------------------------------
+
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { validateWidgetContent } from '@gladysassistant/integration-sdk';
-import { createFakeGladys } from '@gladysassistant/integration-sdk/testing';
-import { buildDiscoveredDevices } from '../src/devices/index.js';
-import { simulateLanSession } from '../src/devices/plug.js';
-import { DEMO_STATUS_WIDGET, WIDGETS, refreshWidgets } from '../src/widgets.js';
-import { normalizeConfig } from '../src/config.js';
+import { WIDGET_KEY } from '../src/hub.js';
+import {
+  BASE_CONFIG,
+  COMBI,
+  FakeLiebherr,
+  WINE,
+  createClock,
+  createWorld,
+  deviceId,
+  featureId,
+} from './helpers/world.js';
 
-const gladys = createFakeGladys();
-const config = normalizeConfig();
-const demoStatus = WIDGETS[DEMO_STATUS_WIDGET];
+async function world(t, options) {
+  const w = await createWorld(options);
+  t.after(() => w.app.stop());
+  const get = async (settings = {}, language = 'en') => {
+    const ack = await w.fake.widgetGet(WIDGET_KEY, { settings, language });
+    assert.equal(ack.success, true, ack.error);
+    const { content } = ack.data;
+    assert.deepEqual(validateWidgetContent(content), [], 'rendered exactly as sent');
+    return content;
+  };
+  return { ...w, get };
+}
 
-// What the SDK passes to onWidgetGet, plus the config index.js adds.
-const getContent = (cfg = config) =>
-  demoStatus.get(gladys, { settings: {}, language: 'en', units: 'metric', config: cfg });
+const ofType = (content, type) => content.components.filter((c) => c.type === type);
 
-test('the demo_status content is rendered exactly as sent', async () => {
-  // [] = nothing the core would drop, truncate or trim to the content budget.
-  assert.deepEqual(validateWidgetContent(await getContent()), []);
-});
-
-test('the degraded plug connection content is valid too', async () => {
-  simulateLanSession(false);
-  try {
-    const content = await getContent();
-    assert.deepEqual(validateWidgetContent(content), []);
-    const status = content.components.find((component) => component.type === 'status');
-    assert.ok(
-      status.items.some((item) => item.color === 'warning'),
-      'degraded shows a warning',
-    );
-  } finally {
-    simulateLanSession(true);
-  }
-});
-
-test('the live tiles reference features the integration publishes', async () => {
-  const featureIds = new Set(
-    buildDiscoveredDevices(gladys, config).flatMap((device) =>
-      device.features.map((feature) => feature.external_id),
-    ),
+test('every appliance: one tile per zone, the alarms, no buttons', async (t) => {
+  const w = await world(t);
+  const content = await w.get();
+  const tiles = ofType(content, 'value');
+  assert.deepEqual(
+    tiles.map((tile) => [tile.label, tile.value, tile.unit]),
+    [
+      ['Kitchen · fridge', 5, '°C'],
+      ['Kitchen · freezer', -18, '°C'],
+      ['Wine cellar · top', 12, '°C'],
+      ['Wine cellar · bottom', 17, '°C'],
+      ['IRBAd 5190-20 001', 4, '°C'],
+    ],
   );
-  const liveTiles = (await getContent()).components.filter((c) => c.device_feature);
-  assert.ok(liveTiles.length > 0, 'the template demonstrates a device-bound tile');
-  for (const tile of liveTiles) {
-    assert.ok(featureIds.has(tile.device_feature), `unknown feature ${tile.device_feature}`);
-  }
+  const [status] = ofType(content, 'status');
+  assert.deepEqual(status.items[0], {
+    label: 'Alarms',
+    value: 'No alarm',
+    icon: 'check-circle',
+    color: 'success',
+  });
+  assert.deepEqual(ofType(content, 'button'), []);
+  assert.equal(content.ttl_seconds, 120);
 });
 
-test('every button action of the content is handled and answers a short toast', async () => {
-  const buttons = (await getContent()).components.filter((c) => c.type === 'button' && c.action);
-  assert.ok(buttons.length > 0, 'the template demonstrates a widget action');
-  for (const { action } of buttons) {
-    const message = await demoStatus.action(gladys, {
-      actionKey: action.key,
-      params: action.params ?? {},
-      settings: {},
-      config,
-    });
-    assert.ok(message.en, 'the toast carries at least the mandatory `en` text');
-    assert.ok(message.en.length <= 200, 'toasts are capped at 200 characters');
-  }
-});
-
-test('an unknown widget action fails, so the user sees the error', async () => {
-  await assert.rejects(
-    demoStatus.action(gladys, { actionKey: 'unknown', params: {}, settings: {}, config }),
-    /Unknown widget action/,
+test('one appliance: its zones, its modes, the SuperCool, SuperFrost and PartyMode buttons', async (t) => {
+  const w = await world(t);
+  const content = await w.get({ appliance: deviceId(w.gladys, COMBI) }, 'fr');
+  assert.deepEqual(
+    ofType(content, 'value').map((tile) => tile.label),
+    ['Réfrigérateur', 'Congélateur'],
   );
+  const buttons = ofType(content, 'button');
+  assert.deepEqual(
+    buttons.map((b) => [b.label, b.icon, b.action.key]),
+    [
+      ['SuperCool', 'circle', 'supercool_0'],
+      ['SuperFrost', 'check-circle', 'superfrost_1'],
+      ['PartyMode', 'circle', 'partymode'],
+    ],
+  );
+  const [status] = ofType(content, 'status');
+  assert.ok(
+    status.items.some((item) => item.label === 'SuperFrost' && item.value === 'Congélateur'),
+  );
+  assert.ok(status.items.some((item) => item.label === 'NightMode' && item.value === 'Actif'));
 });
 
-test('refreshWidgets nudges every widget', () => {
-  const fresh = createFakeGladys();
-  refreshWidgets(fresh);
-  assert.deepEqual(fresh.fake.widgetRefreshes, Object.keys(WIDGETS));
+test('a button switches the mode to the opposite, and Gladys is told', async (t) => {
+  const w = await world(t);
+  await w.fake.deviceCreated(w.fake.discoveredDevices[0]);
+  const content = await w.get({ appliance: deviceId(w.gladys, COMBI) });
+  const superfrost = ofType(content, 'button').find((b) => b.action.key === 'superfrost_1');
+  const ack = await w.fake.widgetAction(
+    WIDGET_KEY,
+    superfrost.action.key,
+    superfrost.action.params,
+    {
+      settings: { appliance: deviceId(w.gladys, COMBI) },
+    },
+  );
+  assert.equal(ack.success, true, ack.error);
+  assert.equal(ack.data.message.en, 'SuperFrost switched off.');
+  assert.equal(w.server.control(COMBI, 'superfrost', 1).value, false);
+  assert.equal(w.fake.lastState(featureId(w.gladys, 'zone-1-superfrost')), 0);
+
+  const after = await w.get({ appliance: deviceId(w.gladys, COMBI) });
+  const again = ofType(after, 'button').find((b) => b.action.key === 'superfrost_1');
+  assert.equal(again.icon, 'circle');
+});
+
+test('an alarm turns its tile red and heads the status list', async (t) => {
+  const clock = createClock();
+  const w = await world(t, { clock, config: { ...BASE_CONFIG, alarm_delay: '15' } });
+  w.server.control(COMBI, 'temperature', 1).value = -8;
+  for (let i = 0; i < 9; i += 1) {
+    clock.advance(2 * 60_000);
+    await w.hub.pollAll();
+  }
+  const content = await w.get({ appliance: deviceId(w.gladys, COMBI) });
+  const freezer = ofType(content, 'value').find((tile) => tile.label === 'Freezer');
+  assert.equal(freezer.color, 'danger');
+  const [status] = ofType(content, 'status');
+  assert.deepEqual(status.items[0], {
+    label: 'Freezer',
+    value: 'Temperature too high, for 16 min',
+    icon: 'alert-triangle',
+    color: 'danger',
+  });
+});
+
+test('an offline appliance shows in the status, without buttons', async (t) => {
+  const clock = createClock();
+  const w = await world(t, { clock });
+  w.server.appliances.get(WINE).online = false;
+  clock.advance(5 * 60_000);
+  await w.hub.pollAll();
+  const content = await w.get({ appliance: deviceId(w.gladys, WINE) }, 'de');
+  const [status] = ofType(content, 'status');
+  assert.ok(status.items.some((item) => item.label === 'Wine cellar' && item.value === 'Offline'));
+  assert.deepEqual(ofType(content, 'button'), []);
+});
+
+test('the states the widget cannot show its data in: one sentence', async (t) => {
+  const noKey = await world(t, { config: { language: 'en' } });
+  const content = await noKey.get({}, 'es');
+  assert.match(content.components[0].text, /clave de API/);
+
+  const w = await world(t);
+  const unknown = await w.get({ appliance: 'ext:test-integration:appliance:gone' });
+  assert.match(unknown.components[0].text, /no longer on the Liebherr account/);
+
+  const empty = await world(t, { server: new FakeLiebherr({ appliances: [] }) });
+  const none = await empty.get();
+  assert.match(none.components[0].text, /no connected appliance/);
+});
+
+test('an unknown widget action is refused', async (t) => {
+  const w = await world(t);
+  const ack = await w.fake.widgetAction(WIDGET_KEY, 'open_door', {
+    appliance: COMBI,
+    control: 'autodoor',
+  });
+  assert.equal(ack.success, false);
+  assert.equal(w.server.count('command'), 0);
 });

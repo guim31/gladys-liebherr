@@ -1,0 +1,66 @@
+[
+  {
+    "name": "temperature",
+    "type": "TemperatureControl",
+    "zoneId": 0,
+    "zonePosition": "top",
+    "value": 5,
+    "target": 4,
+    "min": 2,
+    "max": 9,
+    "unit": "°C"
+  },
+  {
+    "name": "temperature",
+    "type": "TemperatureControl",
+    "zoneId": 1,
+    "zonePosition": "bottom",
+    "value": -18,
+    "target": -18,
+    "min": -26,
+    "max": -15,
+    "unit": "°C"
+  },
+  {
+    "name": "supercool",
+    "type": "ToggleControl",
+    "zoneId": 0,
+    "zonePosition": "top",
+    "value": false
+  },
+  {
+    "name": "superfrost",
+    "type": "ToggleControl",
+    "zoneId": 1,
+    "zonePosition": "bottom",
+    "value": true
+  },
+  { "name": "partymode", "type": "ToggleControl", "value": false },
+  { "name": "nightmode", "type": "ToggleControl", "value": true },
+  {
+    "name": "icemaker",
+    "type": "IceMakerControl",
+    "zoneId": 1,
+    "zonePosition": "bottom",
+    "iceMakerMode": "OFF",
+    "hasMaxIce": true
+  },
+  {
+    "name": "hydrobreeze",
+    "type": "HydroBreezeControl",
+    "zoneId": 0,
+    "zonePosition": "top",
+    "currentMode": "LOW"
+  },
+  {
+    "name": "biofreshplus",
+    "type": "BioFreshPlusControl",
+    "zoneId": 0,
+    "zonePosition": "top",
+    "currentMode": "ZERO_ZERO",
+    "supportedModes": ["ZERO_ZERO", "ZERO_MINUS_TWO", "MINUS_TWO_MINUS_TWO"],
+    "temperatureUnit": "°C"
+  },
+  { "name": "presentationlight", "type": "PresentationLightControl", "value": 3, "max": 5 },
+  { "name": "futurecontrol", "type": "SomethingNewControl", "zoneId": 0, "value": 42 }
+]

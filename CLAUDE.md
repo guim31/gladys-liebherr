@@ -16,12 +16,13 @@ its only runtime dependency. It started from the official JavaScript template.
 ```bash
 npm install
 npm test                                  # node --test, the built-in runner
-node --test test/devices.test.js          # one file
-node --test --test-name-pattern "plug"    # tests whose name matches
+node --test test/hub.test.js              # one file
+node --test --test-name-pattern "setpoint" # tests whose name matches
 npm run lint                              # ESLint
 npm run format:check                      # Prettier, as the CI runs it
 npm run format                            # Prettier, fix in place
 npx github:GladysAssistant/integration-store .   # store admission checks
+node scripts/probe.mjs                    # real HomeAPI, read only (fake key)
 ```
 
 The CI (`.github/workflows/ci.yml`) runs `format:check`, `lint` and `test` on
@@ -32,15 +33,21 @@ pushing.
 
 ```
 index.js                          SDK wiring only: handlers registered before connect()
-src/devices/index.js              registry of the device blueprints + dispatch helpers
-src/devices/<type>.js             one device type per file (buildDevice, onPoll, onSetValue...)
-src/scenes.js                     scene action handlers (manifest `scene_actions`)
-src/widgets.js                    dashboard widget handlers (manifest `widgets`)
+src/app.js                        registerHandlers(gladys): every SDK handler, wired to the hub
+src/hub.js                        LiebherrHub: timer, publication, alarms, commands, status
+src/devices.js                    the Gladys device of an appliance: features, states
+src/alarms.js                     alarms worked out from the readings (pure)
+src/widgets.js                    dashboard widget `liebherr` (pure content builder)
+src/liebherr/client.js            HomeAPI client (fetch seam, error kinds, never logs the key)
+src/liebherr/model.js             HomeAPI answers -> one plain object per appliance
+src/texts.js                      every user-facing text, en/fr/de/es
+src/store.js                      /data/liebherr-state.json (appliance cache, alarm state)
 src/config.js                     DEFAULT_CONFIG (mirrors the manifest defaults) + normalization
-src/weather.js                    example driver (Open-Meteo)
-gladys-assistant-integration.json manifest: name, config_schema, actions, image...
-docs/en.md, docs/fr.md            user documentation, re-hosted by Gladys (mandatory)
-test/                             node --test, against the SDK's fake Gladys (integration-sdk/testing)
+scripts/probe.mjs                 read-only probe of the real HomeAPI (fake key by default)
+gladys-assistant-integration.json manifest: name, config_schema, actions, triggers, widget...
+docs/{en,fr,de,es}.md             user documentation, re-hosted by Gladys (same sections)
+test/                             node --test, SDK fake Gladys + fake HomeAPI (test/helpers/)
+test/fixtures/liebherr/           HomeAPI answers, after the OpenAPI spec and HA's tests
 .github/scripts/release.mjs       release helpers (manifest bump, changelog), tested in test/
 ```
 
@@ -62,7 +69,7 @@ test/                             node --test, against the SDK's fake Gladys (in
   in `CHANGELOG.md` (`### Added`, `Changed`, `Fixed`, `Removed`, `Security`).
   Never write a version heading: the Release workflow moves the section, and it
   becomes the notes of the GitHub Release.
-- **Manifest.** Texts are multi-language objects `{ "en": ..., "fr": ... }`:
+- **Manifest.** Texts are multi-language objects `{ "en", "fr", "de", "es" }`:
   `label`, `description` and `placeholder` alike, never a plain string. The
   catalog `description` holds 10 to 100 characters per language. A field the
   older cores do not know needs a higher `gladys_version` minimum
@@ -70,8 +77,10 @@ test/                             node --test, against the SDK's fake Gladys (in
   `type: "provider"`: 5.1.0). `test/manifest.test.js` ties the manifest to the
   code (defaults, action, scene and widget handlers): change both sides
   together.
-- **User-facing text** is bilingual (English and French): action messages,
-  manifest texts, and `docs/en.md` / `docs/fr.md`, kept in sync.
+- **User-facing text** exists in four languages (English, French, German,
+  Spanish): action messages, manifest texts, feature names, widget, and
+  `docs/en.md`, `docs/fr.md`, `docs/de.md`, `docs/es.md`, kept in sync
+  (`test/i18n.test.js`).
 - **Style.** Prettier formats, ESLint catches mistakes. Comments explain why,
   in English. Tests never touch the network.
 
@@ -233,3 +242,64 @@ long, et sur un « Sie »/« Ihr… » de politesse en allemand. Le store exige 
 - Docs `en`, `fr`, `de`, `es` avec les mêmes sections.
 - Chauffe, ouverture, sécurité : ne rien rendre pilotable « comme un thermostat » ou par un assistant
   vocal quand une erreur serait dangereuse (leçon d'OctoPrint).
+
+## Liebherr SmartDevice (cette intégration)
+
+État au 15/10/2026 : première version (PR `feat/initial`), **développée sans appareil ni compte**.
+Seuls la suite de tests, le lint et le validateur du store ont tourné ; l'API réelle était
+injoignable depuis la session (proxy). `scripts/probe.mjs` éprouve l'API réelle en lecture seule :
+clé factice (doit être refusée en 401/403), ou `LIEBHERR_API_KEY` pour décrire un vrai compte
+(types, zones, contrôles, en-têtes de limite), sans rien afficher de sensible.
+
+**L'API** (SmartDevice HomeAPI, bêta, `https://home-api.smartdevice.liebherr.com`, en-tête
+`api-key`). Spécification OpenAPI officielle dans `pyliebherrhomeapi` (`openapi.json`, MIT).
+
+- `GET /v1/devices` ne liste que les appareils **connectés** : un appareil hors tension disparaît
+  de la liste. Les appareils lus sont donc gardés sous `/data` (structure seulement) pour rester
+  dans la Découverte ; oubliés après 7 jours d'absence s'ils n'ont pas été ajoutés à Gladys.
+- `GET /v1/devices/{id}/controls` : tous les contrôles d'un coup ; 404 « Device is not reachable »
+  = appareil hors ligne, 412 = appareil hors du foyer. Les POST répondent 204 sans corps : la
+  nouvelle valeur est publiée par l'intégration.
+- Les enums sont en **capitales** dans l'API (`COMBI`, `MAX_ICE`, `OPEN`), en minuscules dans
+  `pyliebherrhomeapi` et les tests HA : `model.js` accepte les deux et met tout en minuscules.
+- **L'API ne dit pas ce qu'est une zone** (réfrigérateur, congélateur, cave) : déduit du
+  SuperFrost, de la plage de réglage (max ≤ 0 °C → congélateur) et du type d'appareil. Non vérifié
+  sur un vrai appareil : premier point à contrôler avec la sonde.
+- **Aucune alarme, aucun contact de porte** (sauf l'état AutoDoor), **pas de mode Vacances** :
+  les alarmes (température, porte AutoDoor, hors ligne) sont déduites des relevés
+  (`src/alarms.js`). Baisser une consigne ne déclenche pas d'alarme : l'ancienne reste la
+  référence jusqu'à ce que la zone ait refroidi. Un service Liebherr injoignable n'est pas un
+  appareil hors ligne : rien ne bouge. État des alarmes persisté : pas de double annonce au
+  redémarrage.
+- **Un 401 isolé existe** (une clé valide refusée un instant, d'après `pyliebherrhomeapi`) : le
+  client réessaie une fois avant de conclure. Clé refusée deux fois → 30 min sans appel (ou
+  nouvelle clé). Aucune limite publiée, mais Liebherr dit restreindre les appels et des
+  utilisateurs ont rapporté des blocages d'IP : 429 → pause doublée jusqu'à 30 min.
+- Budget : un `GET controls` par appareil et par intervalle (1 à 5 min, 2 par défaut), plus la
+  liste toutes les 5 min. Le flux SSE temps réel (bêta) n'est pas utilisé : un sondage suffit à
+  ces cadences, et une connexion longue de plus par appareil n'apporte rien au tableau de bord.
+
+**Choix de conception.**
+
+- Consigne en `thermostat/target-temperature`, avec `step` (pas des appareils à paliers
+  `setTemperatureSteps`). Une valeur **hors plage est refusée**, jamais ramenée dans la plage : une
+  scène qui demanderait 20 °C au réfrigérateur est une erreur à signaler. Vérifié dans la 5.2.1 :
+  aucune logique du cœur n'écrit seule sur une consigne de thermostat (pas d'intention vocale, pas
+  de module thermostat côté serveur).
+- AutoDoor : `opening-sensor/binary` en lecture seule (0 ouvert ou en mouvement, 1 fermé).
+  L'ouverture n'est pas proposée (consigne de la série : ce qui ouvre est désactivé).
+- Modes IceMaker / HydroBreeze / BioFresh-Plus en `text/select` (valeurs en minuscules, libellés
+  dans la langue de la config ; BioFresh-Plus en températures, `0 °C / −2 °C`). SuperCool,
+  SuperFrost, PartyMode, NightMode en `switch/binary`. Éclairage de présentation en
+  `light/brightness` 0..max (une valeur trop grande est ramenée au max : sans danger).
+- « En ligne » : pas de fonctionnalité (aucun couple binaire « connectivité » dans le front), mais
+  le badge de transport (`cloud` / `unreachable`), l'alarme `offline` après le délai, et le widget.
+- Déclencheurs `alarm_raised` / `alarm_cleared` (filtres : appareil, type d'alarme ; variables :
+  appareil, zone, température, consigne, unité, minutes). Pas d'action de scène : les
+  fonctionnalités sont déjà pilotables par « Contrôler un appareil ».
+- Widget `liebherr` : tuiles en valeurs (pas liées aux fonctionnalités) pour marcher avant l'ajout
+  des appareils ; boutons SuperCool / SuperFrost / PartyMode avec un seul appareil affiché.
+  `gladys_version >=5.1.0` : aucun bouton à formulaire.
+- États publiés seulement pour les appareils ajoutés (`gladys.devices`), par
+  `publishChangedStates` avec un heartbeat de 12 h ; `onDeviceCreated` les envoie tout de suite.
+- Écritures sous `/data` seulement quand la structure ou les alarmes changent (carte SD).

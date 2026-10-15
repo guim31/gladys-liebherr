@@ -1,0 +1,23 @@
+[
+  {
+    "deviceId": "26.111.222.3",
+    "nickname": "Kitchen",
+    "deviceType": "COMBI",
+    "imageUrl": "https://example.com/productimages/combi.png",
+    "deviceName": "CBNbsd 578i-22 001"
+  },
+  {
+    "deviceId": "26.444.555.6",
+    "nickname": "Wine cellar",
+    "deviceType": "WINE",
+    "imageUrl": "https://example.com/productimages/wine.png",
+    "deviceName": "WPgbi 7472-20 001"
+  },
+  {
+    "deviceId": "26.777.888.9",
+    "nickname": "",
+    "deviceType": "FRIDGE",
+    "imageUrl": "https://example.com/productimages/fridge.png",
+    "deviceName": "IRBAd 5190-20 001"
+  }
+]

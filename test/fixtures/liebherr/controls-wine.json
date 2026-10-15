@@ -1,0 +1,25 @@
+[
+  {
+    "name": "temperature",
+    "type": "TemperatureControl",
+    "zoneId": 0,
+    "zonePosition": "top",
+    "value": 12,
+    "target": 12,
+    "min": 5,
+    "max": 20,
+    "unit": "°C"
+  },
+  {
+    "name": "temperature",
+    "type": "TemperatureControl",
+    "zoneId": 1,
+    "zonePosition": "bottom",
+    "value": 17,
+    "target": 16,
+    "min": 5,
+    "max": 20,
+    "unit": "°C"
+  },
+  { "name": "presentationlight", "type": "PresentationLightControl", "value": 0, "max": 5 }
+]

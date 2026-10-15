@@ -1,67 +1,175 @@
-# Template de démonstration
+# Liebherr SmartDevice
 
-Ceci est la documentation utilisateur de l'intégration. Gladys ré-héberge ce
-fichier et affiche un lien **Documentation** permanent vers lui dans l'écran
-de configuration (dans la langue de l'utilisateur, avec l'anglais en repli) —
-c'est au moment de configurer que l'utilisateur en a le plus besoin. Gardez
-les courtes indications d'accueil dans les blocs `section` du `config_schema`
-du manifest ; mettez ici le pas-à-pas détaillé (captures d'écran, dépannage…).
+Relie à Gladys les réfrigérateurs, congélateurs et caves à vin Liebherr de l'application
+SmartDevice, par l'API cloud officielle de Liebherr (SmartDevice HomeAPI).
 
-## Ce que vous obtenez
+> **Développée sans le matériel : vos retours sont les bienvenus.** Cette intégration a été écrite
+> d'après la documentation officielle de l'API et les données de test de l'intégration Home
+> Assistant, sans appareil Liebherr. Dites-nous ce qui marche et ce qui ne marche pas sur
+> [GitHub](https://github.com/guim31/gladys-liebherr/issues) ou sur le forum Gladys.
 
-Six appareils de démonstration apparaissent après l'installation : une
-station météo (vraies données Open-Meteo), un interrupteur, une lampe
-variable, une prise connectée avec mesure de puissance, un détecteur de
-mouvement et une caméra.
+Cette intégration n'est pas affiliée à Liebherr. Liebherr et SmartDevice sont des marques de leurs
+propriétaires.
+
+## Présentation
+
+- Un appareil Gladys par appareil Liebherr, ses fonctionnalités regroupées par zone
+  (réfrigérateur, congélateur, cave à vin).
+- Pour chaque zone : la **température** mesurée et la **consigne**, que vous pouvez changer dans
+  la plage acceptée par l'appareil.
+- Les fonctions que propose votre appareil : SuperCool, SuperFrost, PartyMode, NightMode,
+  IceMaker, HydroBreeze, BioFresh-Plus, l'éclairage de présentation, et la porte des modèles
+  AutoDoor (en lecture seule).
+- Des **alarmes** déduites par l'intégration : une zone trop chaude trop longtemps, une AutoDoor
+  restée ouverte, un appareil hors ligne. Elles déclenchent vos scènes.
+- Un **widget de tableau de bord** : la température de chaque zone, les alarmes, et les boutons
+  SuperCool, SuperFrost et PartyMode.
+
+## Prérequis
+
+- Gladys 5.1 ou plus récent, avec un accès à Internet : les appareils sont lus par le cloud
+  Liebherr.
+- Un appareil Liebherr avec un boîtier SmartDevice ou le Wi-Fi intégré, **connecté** dans
+  l'application SmartDevice. Un appareil seulement enregistré, mais pas connecté, n'est pas visible
+  par l'API.
+- Une **clé d'API** de la HomeAPI, générée dans l'application SmartDevice :
+  1. ouvrez l'application SmartDevice, puis **Réglages** ;
+  2. ouvrez **Devenir bêta-testeur** (dans les anciennes versions : **Fonctions bêta**) et activez
+     la **HomeAPI** ;
+  3. touchez **Générer une nouvelle clé** et copiez la clé tout de suite : elle ne s'affiche
+     qu'une fois. Une nouvelle clé remplace la précédente.
+
+Le nom des menus dépend de la version et de la langue de l'application.
 
 ## Configuration
 
-1. Ouvrez l'onglet **Configuration** de l'intégration.
-2. Renseignez la **latitude** et la **longitude** que la station météo de
-   démonstration doit observer (Paris par défaut), et choisissez votre unité
-   de température. L'**intervalle de rafraîchissement** règle la fréquence
-   de lecture de la station météo et de la puissance de la prise : toutes
-   les 5 minutes par défaut, toutes les minutes au plus.
-3. Enregistrez : les appareils apparaissent dans l'onglet **Découverte**,
-   prêts à être ajoutés.
+Dans Gladys, allez dans **Intégrations**, ouvrez **Liebherr SmartDevice**, puis renseignez :
 
-Le réglage **Préférer la connexion locale** pilote la prise de
-démonstration : elle affiche en badge le canal réellement utilisé (local ou
-cloud), avec un point orange quand elle fonctionne en mode dégradé (local
-refusé, bascule cloud).
+- **Clé d'API** : la clé copiée depuis l'application SmartDevice.
+- **Intervalle de rafraîchissement** : 1, 2 (par défaut), 3 ou 5 minutes. Liebherr ne publie pas
+  ses limites, mais dit restreindre le nombre d'appels, et a déjà bloqué des clients trop
+  insistants. Avec plusieurs appareils, restez à 2 minutes ou plus.
+- **Marge de l'alarme de température** : l'écart au-dessus de sa consigne qu'une zone peut garder
+  (3 °C par défaut).
+- **Délai d'alarme** : la durée pendant laquelle la température, ou l'appareil hors ligne, doit
+  durer avant l'alarme (30 minutes par défaut).
+- **Délai de l'alarme de porte (AutoDoor)** : la durée pendant laquelle une AutoDoor peut rester
+  ouverte (5 minutes par défaut).
+- **Langue des noms de fonctionnalités** : les noms donnés aux fonctionnalités quand vous ajoutez
+  les appareils (français par défaut).
 
-## Actions
+Enregistrez, puis ouvrez l'onglet **Découverte** de l'intégration et ajoutez vos appareils. Le
+bouton **Tester la connexion** lit les appareils tout de suite et affiche leurs températures.
 
-- **Tester le fournisseur météo** — effectue une requête en direct vers
-  Open-Meteo et affiche la température et l'humidité actuelles sous le
-  bouton.
-- **Identifier un appareil** — choisissez un de vos appareils dans la liste
-  et il se signale (la lampe de démonstration « clignote » dans les logs).
+Ce que cela coûte à l'API Liebherr : un appel par appareil à chaque intervalle, plus la liste des
+appareils toutes les 5 minutes. Une clé refusée est réessayée au bout de 30 minutes (ou dès que
+vous en enregistrez une nouvelle). Une réponse « trop de requêtes » met les lectures en pause, un
+peu plus longtemps à chaque fois, jusqu'à 30 minutes.
 
-## Scènes
+## Appareils et fonctionnalités
 
-L'intégration ajoute ses propres cartes à l'éditeur de scènes (Gladys 5.1
-ou plus récent), dans la catégorie **Intégrations** :
+L'appareil prend le nom donné dans l'application SmartDevice (sinon son modèle). Seules les
+fonctionnalités que propose votre appareil sont créées.
 
-- **Mouvement détecté** (déclencheur) — lance la scène quand un détecteur
-  de démonstration voit bouger quelque chose. Choisissez éventuellement le
-  détecteur et ce qui a bougé (personne, animal) ; laissés vides, toute
-  détection correspond. Les actions suivantes peuvent lire ce qui a bougé
-  avec `{{triggerEvent.data.target}}`.
-- **Identifier un appareil** (action) — fait se signaler l'appareil choisi.
-  Elle indique si l'appareil a pu se signaler, pour que les actions
-  suivantes puissent en dépendre.
+### Chaque zone
 
-## Tableau de bord
+| Fonctionnalité | Dans Gladys                                                                                                         |
+| -------------- | ------------------------------------------------------------------------------------------------------------------- |
+| Température    | La température mesurée (°C ou °F, selon le réglage de l'appareil).                                                  |
+| Consigne       | La température visée, dans la plage de l'appareil. Une valeur hors plage est refusée, jamais ramenée dans la plage. |
+| SuperCool      | Marche/arrêt : refroidit vite le réfrigérateur, puis s'arrête seul.                                                 |
+| SuperFrost     | Marche/arrêt : congèle vite, puis s'arrête seul.                                                                    |
+| IceMaker       | Arrêt, Marche, MaxIce (si l'appareil l'a).                                                                          |
+| HydroBreeze    | Arrêt, Faible, Moyen, Fort.                                                                                         |
+| BioFresh-Plus  | Les températures des deux tiroirs, parmi celles que propose l'appareil (ex. 0 °C / −2 °C).                          |
+| Porte          | Modèles AutoDoor seulement : ouverte ou fermée. En lecture seule : Gladys n'ouvre jamais la porte.                  |
 
-Ajoutez le widget **État de la démo** à un tableau de bord : il affiche en
-direct la température de la station météo et la puissance de la prise du
-bureau, la connexion utilisée par la prise (en orange si dégradée) et la
-position observée. Son bouton **Identifier la lampe** fait se signaler la
-lampe de démonstration.
+Une zone porte le nom de son type : Réfrigérateur, Congélateur ou Cave à vin, avec sa position
+(haut, milieu, bas) quand l'appareil a deux zones du même type. Le type est déduit du type
+d'appareil et de la plage de réglage : l'API ne le donne pas.
+
+### Chaque appareil
+
+| Fonctionnalité            | Dans Gladys                                                    |
+| ------------------------- | -------------------------------------------------------------- |
+| PartyMode                 | Marche/arrêt.                                                  |
+| NightMode                 | Marche/arrêt.                                                  |
+| Éclairage de présentation | Intensité, de 0 (éteint) au maximum de l'appareil (souvent 5). |
+
+Le badge de l'appareil indique **cloud** tant que l'appareil répond, **injoignable** quand il est
+hors ligne ou que le service Liebherr ne répond pas.
+
+## Alarmes (déclencheurs de scène)
+
+L'API Liebherr ne signale aucune alarme : l'intégration les déduit des relevés et déclenche deux
+déclencheurs de scène.
+
+- **Alarme Liebherr** : un problème a duré le délai réglé.
+  - **Température trop haute** : une zone est restée au-dessus de sa consigne plus la marge. Quand
+    vous baissez une consigne, l'ancienne reste la référence jusqu'à ce que la zone ait refroidi :
+    pas de fausse alarme.
+  - **Porte ouverte trop longtemps (AutoDoor)** : seuls les modèles AutoDoor signalent leur porte.
+  - **Appareil hors ligne** : une coupure de courant et une perte du Wi-Fi se ressemblent vues du
+    cloud. Quand le service Liebherr lui-même ne répond pas, rien n'est connu et aucune alarme ne
+    bouge.
+- **Fin d'alarme Liebherr** : la zone a refroidi, la porte est fermée, l'appareil est revenu.
+
+Chaque alarme est déclenchée une fois, et une fois à sa fin, même si Gladys redémarre entre-temps.
+Les deux déclencheurs peuvent se limiter à un appareil et à certaines alarmes. Leurs variables :
+`{{triggerEvent.data.appliance}}`, `zone`, `kind` (temperature, door, offline), `temperature`,
+`target`, `unit` et `minutes` (depuis le début du problème).
+
+## Widget
+
+Le widget **Liebherr** montre tous les appareils, ou celui choisi dans ses réglages :
+
+- une tuile par zone avec sa température, en rouge pendant une alarme ;
+- les alarmes en cours (ou « Aucune alarme »), les appareils hors ligne, les modes actifs ;
+- avec un seul appareil : les boutons **SuperCool**, **SuperFrost** et **PartyMode**. Une coche
+  signale un mode actif ; un appui le bascule.
+
+## Actions de configuration
+
+- **Tester la connexion** : lit les appareils tout de suite et affiche, pour chacun, la
+  température et la consigne de ses zones, ou qu'il est hors ligne.
+
+## Exemples de scènes
+
+- **Alarme congélateur** : déclencheur **Alarme Liebherr**, alarme **Température trop haute** ;
+  action : envoyer un message « {{triggerEvent.data.appliance}} — {{triggerEvent.data.zone}} :
+  {{triggerEvent.data.temperature}} {{triggerEvent.data.unit}} depuis
+  {{triggerEvent.data.minutes}} min ».
+- **Coupure de courant** : déclencheur **Alarme Liebherr**, alarme **Appareil hors ligne** ;
+  action : une notification, et une autre sur **Fin d'alarme Liebherr**.
+- **Courses** : dans la scène « Retour des courses », allumez la fonctionnalité **SuperFrost** du
+  congélateur ; elle s'arrête seule.
+- **Nuits calmes** : chaque soir à 22 h, allumez **NightMode** ; à 7 h, éteignez-le.
 
 ## Dépannage
 
-L'intégration journalise tout ce qu'elle fait : consultez les logs de
-l'intégration depuis l'interface Gladys (ou `docker logs` sur l'hôte) avec
-`LOG_LEVEL=debug` pour le détail complet.
+- **« Clé d'API refusée »** : la clé a été mal copiée, ou remplacée par une nouvelle. Générez une
+  nouvelle clé dans l'application SmartDevice et collez-la dans la configuration.
+- **« Clé acceptée, mais aucun appareil connecté »** : l'appareil est enregistré mais pas
+  connecté. Vérifiez son Wi-Fi dans l'application SmartDevice.
+- **« Trop de requêtes vers Liebherr »** : allongez l'intervalle de rafraîchissement.
+  L'intégration fait une pause d'elle-même et repart.
+- **Un appareil reste « injoignable »** : vérifiez qu'il est connecté dans l'application
+  SmartDevice. Il reste dans Gladys avec ses dernières valeurs.
+- **Une consigne est refusée** : l'appareil n'accepte que sa propre plage (indiquée dans le
+  message), et certains modèles seulement certaines valeurs (les boutons + et − les suivent).
+- Plus de détails dans les journaux de l'intégration, avec `LOG_LEVEL=debug`. La clé d'API n'est
+  jamais écrite dans les journaux.
+
+## Limites
+
+- Développée sans le matériel : les noms de zones, l'AutoDoor et les appareils en Fahrenheit
+  n'ont pas été essayés sur un vrai appareil.
+- La HomeAPI est un service bêta de Liebherr : elle peut changer ou s'arrêter.
+- Pas de contact de porte hors modèles AutoDoor, pas de mode Vacances, pas d'alarme de coupure de
+  courant venant de l'appareil lui-même : l'API ne les expose pas.
+- L'AutoDoor ne peut pas être ouverte depuis Gladys, volontairement.
+- Les valeurs sont lues toutes les 1 à 5 minutes : un changement bref entre deux lectures n'est
+  pas vu. Liebherr propose aussi un flux en temps réel (bêta), non utilisé ici.
+- Les températures sont en degrés entiers, comme l'API les donne.
+- Les noms des fonctionnalités sont fixés à l'ajout de l'appareil : changer la langue ensuite ne
+  renomme que les nouveaux appareils.
