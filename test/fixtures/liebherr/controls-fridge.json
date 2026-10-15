@@ -1,0 +1,29 @@
+[
+  {
+    "name": "temperature",
+    "type": "TemperatureControl",
+    "zoneId": 0,
+    "zonePosition": "top",
+    "value": 4,
+    "target": 4,
+    "min": 2,
+    "max": 8,
+    "unit": "°C",
+    "setTemperatureSteps": [2, 4, 6, 8],
+    "setTemperatureStepsEnabled": true
+  },
+  {
+    "name": "supercool",
+    "type": "ToggleControl",
+    "zoneId": 0,
+    "zonePosition": "top",
+    "value": false
+  },
+  {
+    "name": "autodoor",
+    "type": "AutoDoorControl",
+    "zoneId": 0,
+    "zonePosition": "top",
+    "value": "CLOSED"
+  }
+]

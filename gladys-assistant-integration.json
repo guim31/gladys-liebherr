@@ -1,177 +1,707 @@
 {
   "manifest_version": 1,
   "type": "device",
-  "name": "Demo Devices Template",
+  "name": "Liebherr SmartDevice",
   "description": {
-    "en": "Starter template showing sensors, a switch, a dimmable light and a smart plug.",
-    "fr": "Template de démarrage : capteurs, interrupteur, lampe variable et prise connectée."
+    "en": "Liebherr fridges, freezers and wine cabinets: temperatures, setpoints, modes, alarms.",
+    "fr": "Réfrigérateurs, congélateurs et caves Liebherr : températures, consignes, modes, alarmes.",
+    "de": "Liebherr-Kühl-, Gefrier- und Weingeräte: Temperaturen, Sollwerte, Modi, Alarme.",
+    "es": "Frigoríficos, congeladores y vinotecas Liebherr: temperaturas, consignas, modos, alarmas."
   },
   "version": "1.0.0",
-  "docker_image": "ghcr.io/gladysassistant/integration-template-js:1.0.0",
+  "docker_image": "ghcr.io/guim31/gladys-liebherr:1.0.0",
   "gladys_version": ">=5.1.0",
-  "cover_image": "https://raw.githubusercontent.com/GladysAssistant/integration-template-js/master/cover.png",
-  "categories": ["lighting", "security", "environment"],
-  "transports": ["local", "cloud"],
+  "cover_image": "https://raw.githubusercontent.com/guim31/gladys-liebherr/main/cover.png",
+  "categories": ["appliances"],
+  "transports": ["cloud"],
   "config_schema": [
     {
       "key": "intro",
       "type": "section",
-      "label": { "en": "Getting started", "fr": "Pour commencer" },
+      "label": {
+        "en": "Your Liebherr account",
+        "fr": "Votre compte Liebherr",
+        "de": "Dein Liebherr-Konto",
+        "es": "Su cuenta Liebherr"
+      },
       "description": {
-        "en": "The demo weather station reads real data from the free Open-Meteo API: pick the coordinates to observe. No account, no API key.",
-        "fr": "La station météo de démonstration lit de vraies données via l'API gratuite Open-Meteo : choisissez les coordonnées à observer. Pas de compte, pas de clé d'API."
+        "en": "The appliances must be connected in the SmartDevice app. In the app: Settings, Become a beta tester, activate the HomeAPI, Generate new key. Copy the key at once: it is shown only once.",
+        "fr": "Les appareils doivent être connectés dans l'application SmartDevice. Dans l'application : Réglages, Devenir bêta-testeur, activez la HomeAPI, Générer une nouvelle clé. Copiez la clé tout de suite : elle ne s'affiche qu'une fois.",
+        "de": "Die Geräte müssen in der SmartDevice-App verbunden sein. In der App: Einstellungen, Beta-Tester werden, HomeAPI aktivieren, Neuen Schlüssel erzeugen. Kopiere den Schlüssel sofort: Er wird nur einmal angezeigt.",
+        "es": "Los aparatos deben estar conectados en la aplicación SmartDevice. En la aplicación: Ajustes, Ser beta tester, active la HomeAPI, Generar nueva clave. Copie la clave enseguida: solo se muestra una vez."
       },
       "links": [
         {
-          "url": "https://open-meteo.com/en/docs",
-          "label": { "en": "Open-Meteo documentation", "fr": "Documentation Open-Meteo" }
+          "url": "https://developer.liebherr.com/apis/smartdevice-homeapi/",
+          "label": {
+            "en": "Liebherr HomeAPI",
+            "fr": "HomeAPI de Liebherr",
+            "de": "Liebherr HomeAPI",
+            "es": "HomeAPI de Liebherr"
+          }
         }
       ]
     },
     {
-      "key": "latitude",
-      "type": "number",
-      "label": { "en": "Latitude", "fr": "Latitude" },
-      "description": {
-        "en": "Latitude used for the demo weather sensor.",
-        "fr": "Latitude utilisée par le capteur météo de démonstration."
+      "key": "api_key",
+      "type": "secret",
+      "label": {
+        "en": "API key",
+        "fr": "Clé d'API",
+        "de": "API-Schlüssel",
+        "es": "Clave de API"
       },
-      "placeholder": { "en": "e.g. 48.8566", "fr": "ex. 48.8566" },
-      "required": true,
-      "default": 48.8566,
-      "min": -90,
-      "max": 90
+      "description": {
+        "en": "The key generated in the SmartDevice app. A new key replaces the previous one.",
+        "fr": "La clé générée dans l'application SmartDevice. Une nouvelle clé remplace la précédente.",
+        "de": "Der in der SmartDevice-App erzeugte Schlüssel. Ein neuer Schlüssel ersetzt den vorherigen.",
+        "es": "La clave generada en la aplicación SmartDevice. Una clave nueva sustituye a la anterior."
+      },
+      "required": true
     },
     {
-      "key": "longitude",
-      "type": "number",
-      "label": { "en": "Longitude", "fr": "Longitude" },
-      "description": {
-        "en": "Longitude used for the demo weather sensor.",
-        "fr": "Longitude utilisée par le capteur météo de démonstration."
-      },
-      "placeholder": { "en": "e.g. 2.3522", "fr": "ex. 2.3522" },
-      "required": true,
-      "default": 2.3522,
-      "min": -180,
-      "max": 180
-    },
-    {
-      "key": "unit",
+      "key": "poll_interval",
       "type": "select",
-      "label": { "en": "Temperature unit", "fr": "Unité de température" },
+      "label": {
+        "en": "Refresh interval",
+        "fr": "Intervalle de rafraîchissement",
+        "de": "Aktualisierungsintervall",
+        "es": "Intervalo de actualización"
+      },
+      "description": {
+        "en": "How often the Liebherr cloud is read. Liebherr limits the number of calls: stay at 2 minutes or more with several appliances.",
+        "fr": "Fréquence de lecture du cloud Liebherr. Liebherr limite le nombre d'appels : restez à 2 minutes ou plus avec plusieurs appareils.",
+        "de": "Wie oft die Liebherr-Cloud gelesen wird. Liebherr begrenzt die Anzahl der Aufrufe: Bleib bei mehreren Geräten bei 2 Minuten oder mehr.",
+        "es": "Frecuencia de lectura de la nube de Liebherr. Liebherr limita el número de llamadas: mantenga 2 minutos o más con varios aparatos."
+      },
       "required": false,
-      "default": "celsius",
+      "default": "120",
       "options": [
-        { "value": "celsius", "label": { "en": "Celsius", "fr": "Celsius" } },
-        { "value": "fahrenheit", "label": { "en": "Fahrenheit", "fr": "Fahrenheit" } }
+        {
+          "value": "60",
+          "label": {
+            "en": "1 minute",
+            "fr": "1 minute",
+            "de": "1 Minute",
+            "es": "1 minuto"
+          }
+        },
+        {
+          "value": "120",
+          "label": {
+            "en": "2 minutes",
+            "fr": "2 minutes",
+            "de": "2 Minuten",
+            "es": "2 minutos"
+          }
+        },
+        {
+          "value": "180",
+          "label": {
+            "en": "3 minutes",
+            "fr": "3 minutes",
+            "de": "3 Minuten",
+            "es": "3 minutos"
+          }
+        },
+        {
+          "value": "300",
+          "label": {
+            "en": "5 minutes",
+            "fr": "5 minutes",
+            "de": "5 Minuten",
+            "es": "5 minutos"
+          }
+        }
       ]
     },
     {
-      "key": "poll_frequency",
-      "type": "number",
-      "label": { "en": "Refresh interval (s)", "fr": "Intervalle de rafraîchissement (s)" },
+      "key": "alarms",
+      "type": "section",
+      "label": {
+        "en": "Alarms",
+        "fr": "Alarmes",
+        "de": "Alarme",
+        "es": "Alarmas"
+      },
       "description": {
-        "en": "How often sensors are polled, in seconds (one minute minimum).",
-        "fr": "Fréquence d'interrogation des capteurs, en secondes (une minute minimum)."
+        "en": "The Liebherr cloud reports no alarm: the integration works them out from the readings and fires the \"Liebherr alarm\" scene triggers.",
+        "fr": "Le cloud Liebherr ne signale aucune alarme : l'intégration les déduit des relevés et déclenche les scènes « Alarme Liebherr ».",
+        "de": "Die Liebherr-Cloud meldet keine Alarme: Die Integration leitet sie aus den Messwerten ab und löst die Szenen-Auslöser „Liebherr-Alarm“ aus.",
+        "es": "La nube de Liebherr no informa de alarmas: la integración las deduce de las lecturas y activa los disparadores «Alarma Liebherr»."
+      }
+    },
+    {
+      "key": "alarm_margin",
+      "type": "select",
+      "label": {
+        "en": "Temperature alarm margin",
+        "fr": "Marge de l'alarme de température",
+        "de": "Toleranz des Temperaturalarms",
+        "es": "Margen de la alarma de temperatura"
+      },
+      "description": {
+        "en": "Alarm when a zone stays this far above its setpoint.",
+        "fr": "Alarme quand une zone reste à cet écart au-dessus de sa consigne.",
+        "de": "Alarm, wenn ein Bereich so weit über seinem Sollwert bleibt.",
+        "es": "Alarma cuando una zona se mantiene así de por encima de su consigna."
       },
       "required": false,
-      "default": 300,
-      "min": 60,
-      "max": 3600
+      "default": "3",
+      "options": [
+        {
+          "value": "2",
+          "label": {
+            "en": "2 °C",
+            "fr": "2 °C",
+            "de": "2 °C",
+            "es": "2 °C"
+          }
+        },
+        {
+          "value": "3",
+          "label": {
+            "en": "3 °C",
+            "fr": "3 °C",
+            "de": "3 °C",
+            "es": "3 °C"
+          }
+        },
+        {
+          "value": "5",
+          "label": {
+            "en": "5 °C",
+            "fr": "5 °C",
+            "de": "5 °C",
+            "es": "5 °C"
+          }
+        },
+        {
+          "value": "8",
+          "label": {
+            "en": "8 °C",
+            "fr": "8 °C",
+            "de": "8 °C",
+            "es": "8 °C"
+          }
+        }
+      ]
+    },
+    {
+      "key": "alarm_delay",
+      "type": "select",
+      "label": {
+        "en": "Alarm delay",
+        "fr": "Délai d'alarme",
+        "de": "Alarmverzögerung",
+        "es": "Retardo de la alarma"
+      },
+      "description": {
+        "en": "How long the temperature (or the appliance offline) must last before the alarm.",
+        "fr": "Durée pendant laquelle la température (ou l'appareil hors ligne) doit durer avant l'alarme.",
+        "de": "Wie lange die Temperatur (oder das Gerät offline) anhalten muss, bevor der Alarm kommt.",
+        "es": "Cuánto tiempo debe durar la temperatura (o el aparato sin conexión) antes de la alarma."
+      },
+      "required": false,
+      "default": "30",
+      "options": [
+        {
+          "value": "15",
+          "label": {
+            "en": "15 minutes",
+            "fr": "15 minutes",
+            "de": "15 Minuten",
+            "es": "15 minutos"
+          }
+        },
+        {
+          "value": "30",
+          "label": {
+            "en": "30 minutes",
+            "fr": "30 minutes",
+            "de": "30 Minuten",
+            "es": "30 minutos"
+          }
+        },
+        {
+          "value": "60",
+          "label": {
+            "en": "60 minutes",
+            "fr": "60 minutes",
+            "de": "60 Minuten",
+            "es": "60 minutos"
+          }
+        },
+        {
+          "value": "120",
+          "label": {
+            "en": "120 minutes",
+            "fr": "120 minutes",
+            "de": "120 Minuten",
+            "es": "120 minutos"
+          }
+        }
+      ]
+    },
+    {
+      "key": "door_alarm_delay",
+      "type": "select",
+      "label": {
+        "en": "Door alarm delay (AutoDoor)",
+        "fr": "Délai de l'alarme de porte (AutoDoor)",
+        "de": "Verzögerung des Türalarms (AutoDoor)",
+        "es": "Retardo de la alarma de puerta (AutoDoor)"
+      },
+      "description": {
+        "en": "Only the AutoDoor models report their door.",
+        "fr": "Seuls les modèles AutoDoor signalent leur porte.",
+        "de": "Nur die AutoDoor-Modelle melden ihre Tür.",
+        "es": "Solo los modelos AutoDoor informan de su puerta."
+      },
+      "required": false,
+      "default": "5",
+      "options": [
+        {
+          "value": "2",
+          "label": {
+            "en": "2 minutes",
+            "fr": "2 minutes",
+            "de": "2 Minuten",
+            "es": "2 minutos"
+          }
+        },
+        {
+          "value": "5",
+          "label": {
+            "en": "5 minutes",
+            "fr": "5 minutes",
+            "de": "5 Minuten",
+            "es": "5 minutos"
+          }
+        },
+        {
+          "value": "10",
+          "label": {
+            "en": "10 minutes",
+            "fr": "10 minutes",
+            "de": "10 Minuten",
+            "es": "10 minutos"
+          }
+        },
+        {
+          "value": "15",
+          "label": {
+            "en": "15 minutes",
+            "fr": "15 minutes",
+            "de": "15 Minuten",
+            "es": "15 minutos"
+          }
+        }
+      ]
+    },
+    {
+      "key": "language",
+      "type": "select",
+      "label": {
+        "en": "Language of the feature names",
+        "fr": "Langue des noms de fonctionnalités",
+        "de": "Sprache der Funktionsnamen",
+        "es": "Idioma de los nombres de funciones"
+      },
+      "description": {
+        "en": "Names given to the features when the devices are created in Gladys.",
+        "fr": "Noms donnés aux fonctionnalités à la création des appareils dans Gladys.",
+        "de": "Namen der Funktionen beim Anlegen der Geräte in Gladys.",
+        "es": "Nombres dados a las funciones al crear los dispositivos en Gladys."
+      },
+      "required": false,
+      "default": "fr",
+      "options": [
+        {
+          "value": "en",
+          "label": {
+            "en": "English",
+            "fr": "Anglais",
+            "de": "Englisch",
+            "es": "Inglés"
+          }
+        },
+        {
+          "value": "fr",
+          "label": {
+            "en": "French",
+            "fr": "Français",
+            "de": "Französisch",
+            "es": "Francés"
+          }
+        },
+        {
+          "value": "de",
+          "label": {
+            "en": "German",
+            "fr": "Allemand",
+            "de": "Deutsch",
+            "es": "Alemán"
+          }
+        },
+        {
+          "value": "es",
+          "label": {
+            "en": "Spanish",
+            "fr": "Espagnol",
+            "de": "Spanisch",
+            "es": "Español"
+          }
+        }
+      ]
     }
   ],
   "actions": [
     {
-      "key": "test_weather",
-      "label": { "en": "Test the weather provider", "fr": "Tester le fournisseur météo" },
-      "timeout_seconds": 30
-    },
-    {
-      "key": "identify",
-      "label": { "en": "Identify a device", "fr": "Identifier un appareil" },
-      "fields": [
-        {
-          "key": "device",
-          "type": "select",
-          "source": "devices",
-          "label": { "en": "Device", "fr": "Appareil" },
-          "required": true
-        }
-      ]
+      "key": "test_connection",
+      "label": {
+        "en": "Test the connection",
+        "fr": "Tester la connexion",
+        "de": "Verbindung testen",
+        "es": "Probar la conexión"
+      },
+      "description": {
+        "en": "Reads the appliances of the account now and shows their temperatures.",
+        "fr": "Lit maintenant les appareils du compte et affiche leurs températures.",
+        "de": "Liest jetzt die Geräte des Kontos und zeigt ihre Temperaturen.",
+        "es": "Lee ahora los aparatos de la cuenta y muestra sus temperaturas."
+      },
+      "timeout_seconds": 60
     }
   ],
   "scene_triggers": [
     {
-      "key": "motion_detected",
-      "label": { "en": "Motion detected", "fr": "Mouvement détecté" },
+      "key": "alarm_raised",
+      "label": {
+        "en": "Liebherr alarm",
+        "fr": "Alarme Liebherr",
+        "de": "Liebherr-Alarm",
+        "es": "Alarma Liebherr"
+      },
       "description": {
-        "en": "A demo motion sensor saw a person or an animal move.",
-        "fr": "Un détecteur de démonstration a vu bouger une personne ou un animal."
+        "en": "A zone too warm, an AutoDoor open or an appliance offline, for the configured delay.",
+        "fr": "Une zone trop chaude, une AutoDoor ouverte ou un appareil hors ligne, pendant le délai réglé.",
+        "de": "Ein zu warmer Bereich, eine offene AutoDoor oder ein Gerät offline, für die eingestellte Dauer.",
+        "es": "Una zona demasiado caliente, una AutoDoor abierta o un aparato sin conexión, durante el retardo elegido."
       },
       "fields": [
         {
           "key": "device",
           "type": "select",
           "source": "devices",
-          "label": { "en": "Sensor", "fr": "Détecteur" }
+          "label": {
+            "en": "Appliance",
+            "fr": "Appareil",
+            "de": "Gerät",
+            "es": "Aparato"
+          }
         },
         {
-          "key": "target",
+          "key": "kind",
           "type": "multi_select",
-          "label": { "en": "What moved", "fr": "Ce qui a bougé" },
+          "label": {
+            "en": "Alarm",
+            "fr": "Alarme",
+            "de": "Alarm",
+            "es": "Alarma"
+          },
+          "description": {
+            "en": "Leave empty for every alarm.",
+            "fr": "Laissez vide pour toutes les alarmes.",
+            "de": "Leer lassen für alle Alarme.",
+            "es": "Déjelo vacío para todas las alarmas."
+          },
           "options": [
-            { "value": "person", "label": { "en": "Person", "fr": "Personne" } },
-            { "value": "animal", "label": { "en": "Animal", "fr": "Animal" } }
+            {
+              "value": "temperature",
+              "label": {
+                "en": "Temperature too high",
+                "fr": "Température trop haute",
+                "de": "Temperatur zu hoch",
+                "es": "Temperatura demasiado alta"
+              }
+            },
+            {
+              "value": "door",
+              "label": {
+                "en": "Door open too long (AutoDoor)",
+                "fr": "Porte ouverte trop longtemps (AutoDoor)",
+                "de": "Tür zu lange offen (AutoDoor)",
+                "es": "Puerta abierta demasiado tiempo (AutoDoor)"
+              }
+            },
+            {
+              "value": "offline",
+              "label": {
+                "en": "Appliance offline",
+                "fr": "Appareil hors ligne",
+                "de": "Gerät offline",
+                "es": "Aparato sin conexión"
+              }
+            }
           ]
         }
       ],
       "variables": [
         {
-          "key": "target",
+          "key": "kind",
           "type": "string",
-          "label": { "en": "What moved", "fr": "Ce qui a bougé" }
+          "label": {
+            "en": "Alarm (temperature, door, offline)",
+            "fr": "Alarme (temperature, door, offline)",
+            "de": "Alarm (temperature, door, offline)",
+            "es": "Alarma (temperature, door, offline)"
+          }
+        },
+        {
+          "key": "appliance",
+          "type": "string",
+          "label": {
+            "en": "Appliance",
+            "fr": "Appareil",
+            "de": "Gerät",
+            "es": "Aparato"
+          }
+        },
+        {
+          "key": "zone",
+          "type": "string",
+          "label": {
+            "en": "Zone",
+            "fr": "Zone",
+            "de": "Bereich",
+            "es": "Zona"
+          }
+        },
+        {
+          "key": "temperature",
+          "type": "number",
+          "label": {
+            "en": "Temperature",
+            "fr": "Température",
+            "de": "Temperatur",
+            "es": "Temperatura"
+          }
+        },
+        {
+          "key": "target",
+          "type": "number",
+          "label": {
+            "en": "Setpoint",
+            "fr": "Consigne",
+            "de": "Solltemperatur",
+            "es": "Consigna"
+          }
+        },
+        {
+          "key": "unit",
+          "type": "string",
+          "label": {
+            "en": "Unit",
+            "fr": "Unité",
+            "de": "Einheit",
+            "es": "Unidad"
+          }
+        },
+        {
+          "key": "minutes",
+          "type": "number",
+          "label": {
+            "en": "Minutes since the problem began",
+            "fr": "Minutes depuis le début du problème",
+            "de": "Minuten seit Beginn des Problems",
+            "es": "Minutos desde el inicio del problema"
+          }
         }
       ]
-    }
-  ],
-  "scene_actions": [
+    },
     {
-      "key": "identify_device",
-      "label": { "en": "Identify a device", "fr": "Identifier un appareil" },
-      "description": {
-        "en": "Make a device signal itself (the demo light blinks).",
-        "fr": "Fait se signaler un appareil (la lampe de démonstration clignote)."
+      "key": "alarm_cleared",
+      "label": {
+        "en": "Liebherr alarm over",
+        "fr": "Fin d'alarme Liebherr",
+        "de": "Liebherr-Alarm vorbei",
+        "es": "Fin de alarma Liebherr"
       },
-      "timeout_seconds": 15,
+      "description": {
+        "en": "A Liebherr alarm is over: the zone cooled down, the door closed, the appliance is back.",
+        "fr": "Une alarme Liebherr est terminée : la zone a refroidi, la porte est fermée, l'appareil est revenu.",
+        "de": "Ein Liebherr-Alarm ist vorbei: Der Bereich ist abgekühlt, die Tür zu, das Gerät wieder da.",
+        "es": "Una alarma Liebherr ha terminado: la zona se ha enfriado, la puerta está cerrada, el aparato ha vuelto."
+      },
       "fields": [
         {
           "key": "device",
           "type": "select",
           "source": "devices",
-          "label": { "en": "Device", "fr": "Appareil" },
-          "required": true
+          "label": {
+            "en": "Appliance",
+            "fr": "Appareil",
+            "de": "Gerät",
+            "es": "Aparato"
+          }
+        },
+        {
+          "key": "kind",
+          "type": "multi_select",
+          "label": {
+            "en": "Alarm",
+            "fr": "Alarme",
+            "de": "Alarm",
+            "es": "Alarma"
+          },
+          "description": {
+            "en": "Leave empty for every alarm.",
+            "fr": "Laissez vide pour toutes les alarmes.",
+            "de": "Leer lassen für alle Alarme.",
+            "es": "Déjelo vacío para todas las alarmas."
+          },
+          "options": [
+            {
+              "value": "temperature",
+              "label": {
+                "en": "Temperature too high",
+                "fr": "Température trop haute",
+                "de": "Temperatur zu hoch",
+                "es": "Temperatura demasiado alta"
+              }
+            },
+            {
+              "value": "door",
+              "label": {
+                "en": "Door open too long (AutoDoor)",
+                "fr": "Porte ouverte trop longtemps (AutoDoor)",
+                "de": "Tür zu lange offen (AutoDoor)",
+                "es": "Puerta abierta demasiado tiempo (AutoDoor)"
+              }
+            },
+            {
+              "value": "offline",
+              "label": {
+                "en": "Appliance offline",
+                "fr": "Appareil hors ligne",
+                "de": "Gerät offline",
+                "es": "Aparato sin conexión"
+              }
+            }
+          ]
         }
       ],
-      "outputs": [
+      "variables": [
         {
-          "key": "signalled",
-          "type": "boolean",
-          "label": { "en": "Device signalled", "fr": "Appareil signalé" }
+          "key": "kind",
+          "type": "string",
+          "label": {
+            "en": "Alarm (temperature, door, offline)",
+            "fr": "Alarme (temperature, door, offline)",
+            "de": "Alarm (temperature, door, offline)",
+            "es": "Alarma (temperature, door, offline)"
+          }
+        },
+        {
+          "key": "appliance",
+          "type": "string",
+          "label": {
+            "en": "Appliance",
+            "fr": "Appareil",
+            "de": "Gerät",
+            "es": "Aparato"
+          }
+        },
+        {
+          "key": "zone",
+          "type": "string",
+          "label": {
+            "en": "Zone",
+            "fr": "Zone",
+            "de": "Bereich",
+            "es": "Zona"
+          }
+        },
+        {
+          "key": "temperature",
+          "type": "number",
+          "label": {
+            "en": "Temperature",
+            "fr": "Température",
+            "de": "Temperatur",
+            "es": "Temperatura"
+          }
+        },
+        {
+          "key": "target",
+          "type": "number",
+          "label": {
+            "en": "Setpoint",
+            "fr": "Consigne",
+            "de": "Solltemperatur",
+            "es": "Consigna"
+          }
+        },
+        {
+          "key": "unit",
+          "type": "string",
+          "label": {
+            "en": "Unit",
+            "fr": "Unité",
+            "de": "Einheit",
+            "es": "Unidad"
+          }
+        },
+        {
+          "key": "minutes",
+          "type": "number",
+          "label": {
+            "en": "Minutes since the problem began",
+            "fr": "Minutes depuis le début du problème",
+            "de": "Minuten seit Beginn des Problems",
+            "es": "Minutos desde el inicio del problema"
+          }
         }
       ]
     }
   ],
   "widgets": [
     {
-      "key": "demo_status",
-      "label": { "en": "Demo status", "fr": "État de la démo" },
-      "description": {
-        "en": "Live temperature and plug power, plug connection and observed location.",
-        "fr": "Température et puissance en direct, connexion de la prise, position observée."
+      "key": "liebherr",
+      "label": {
+        "en": "Liebherr",
+        "fr": "Liebherr",
+        "de": "Liebherr",
+        "es": "Liebherr"
       },
-      "icon": "activity",
-      "action_timeout_seconds": 15
+      "description": {
+        "en": "Zone temperatures, alarms, and the SuperCool, SuperFrost and PartyMode buttons.",
+        "fr": "Températures des zones, alarmes, et les boutons SuperCool, SuperFrost et PartyMode.",
+        "de": "Temperaturen der Bereiche, Alarme und die Tasten SuperCool, SuperFrost und PartyMode.",
+        "es": "Temperaturas de las zonas, alarmas y los botones SuperCool, SuperFrost y PartyMode."
+      },
+      "icon": "thermometer",
+      "settings": [
+        {
+          "key": "appliance",
+          "type": "select",
+          "source": "devices",
+          "label": {
+            "en": "Appliance",
+            "fr": "Appareil",
+            "de": "Gerät",
+            "es": "Aparato"
+          },
+          "description": {
+            "en": "Empty: every appliance.",
+            "fr": "Vide : tous les appareils.",
+            "de": "Leer: alle Geräte.",
+            "es": "Vacío: todos los aparatos."
+          }
+        }
+      ],
+      "action_timeout_seconds": 30
     }
   ]
 }

@@ -30,6 +30,18 @@ Gladys before reporting a problem.
 
 In scope: the code of this repository and the Docker image it publishes.
 
+What the integration handles:
+
+- **The Liebherr API key**, typed in the Gladys configuration (a secret field). It is sent only
+  to `https://home-api.smartdevice.liebherr.com`, in the `api-key` header. It is never written to
+  `/data` nor in the logs, at any level (`test/logs.test.js`).
+- **`/data/liebherr-state.json`**: the appliances last read (serial number, nickname, model,
+  controls) and the state of the alarms, so an offline appliance stays in Gladys and an alarm is
+  not announced twice. No credential.
+- **Network**: HTTPS to the Liebherr cloud only. Nothing listens in the container.
+- **Commands**: setpoints, modes and the light, within the range the appliance gives. Opening the
+  door of an AutoDoor appliance is not offered.
+
 Out of scope: Gladys Assistant itself (see its
 [security policy](https://github.com/GladysAssistant/Gladys/security/policy)),
-and the third-party services and devices the integration talks to.
+the Liebherr SmartDevice app, cloud and appliances.
