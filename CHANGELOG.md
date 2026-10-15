@@ -10,6 +10,8 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-10-15
+
 ### Added
 
 - Liebherr SmartDevice fridges, freezers and wine cabinets in Gladys, through the official
@@ -26,4 +28,5 @@ the notes of the version's GitHub Release.
   interval of 1 to 5 minutes that respects the limits of the Liebherr API.
 - Texts and documentation in English, French, German and Spanish.
 
-[Unreleased]: https://github.com/guim31/gladys-liebherr/commits/main
+[Unreleased]: https://github.com/guim31/gladys-liebherr/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/guim31/gladys-liebherr/releases/tag/v1.0.1
